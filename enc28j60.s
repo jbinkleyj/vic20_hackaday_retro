@@ -27,7 +27,7 @@ e28_cr_setbank
 	tya
 	pha
 	sta E28_BANK
-	ldx #$03	; Clear CR bank selection first
+	ldx #$03	; Zero out bank before setting bits
 	lda #E28_ECON1
 	ldy #E28_BFC
 	jsr e28_write_bypass
@@ -36,11 +36,12 @@ e28_cr_setbank
 	rol
 	rol
 	rol
+	beq +	; Skip unnecessary write if bank is 0
 	tax
-	lda #E28_ECON1	; Actually set the bank
+	lda #E28_ECON1	; Actually set the desired bank
 	ldy #E28_BFS
 	jsr e28_write_bypass
-	pla
++	pla
 	tay
 	pla
 	tax
