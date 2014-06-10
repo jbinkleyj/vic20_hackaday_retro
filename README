@@ -1,0 +1,68 @@
+                The Unexpanded VIC-20 Hackaday Retro Project
+                       (Licensed under GNU GPL v2)
+
+                   By Jody Bruchon <jody@jodybruchon.com>
+
+Hackaday has a neat "retro challenge" where people try to get very old
+technology on the Hackaday Retro site at http://retro.hackaday.com/ and I
+wanted in on the fun!
+
+While I've always wanted to get a Commodore 64 on the Internet, there are
+already plenty of old C64s that can do it. There is no challenge involved in
+that anymore: get a C64 and a TFE cartridge and some free software and it
+just magically works.
+
+I've also noticed that people on Hackaday Retro's "successes" page sometimes
+do what I consider cheating: taking an old, weak, slow, or otherwise very
+limited machine, getting it a terminal emulator in some fashion, then using
+a much more powerful computer to run a Web browser in that terminal. While
+that's definitely interesting and cool to see, I believe that it is not in
+the spirit of the Hackaday Retro challenge. Programming a serial port and
+connecting it to a Linux serial TTY is a very weak challenge!
+
+In keeping with the true spirit of the challenge as well as doing something
+which has never been done before, this project aims to get an unexpanded
+Commodore VIC-20 computer to access and display Hackaday Retro without any
+"cheating" and using true Ethernet instead of having another computer help
+via SLIP and a serial port. That means that the VIC-20 will have to do all
+of these things itself:
+
+* Running an SPI interface
+* Managing modern Ethernet adapter hardware
+* IP, TCP, and ARP protocols
+* Speaking HTTP
+* Very basic parsing of HTML
+
+The challenge comes from having to do all of this on a machine that shipped
+with only 5 KB of RAM, with 506 bytes of that taken by character display RAM
+and some more taken by the 6502 processor's stack. Fitting that much code
+and data into such a tight space seems almost impossible, but I am trying
+anyway.
+
+Some additional notes:
+
+* Many thanks to Andre Fachat for the SPI bus interface I'll be using. For
+  more information, I encourage you to visit the CS/A65 SPI website:
+                http://www.6502.org/users/andre/csa/spi/
+
+* I'm using the ENC28J60 chip which does have 8 KB of RAM onboard, but the
+  RAM is used for packet buffers and is only accessible through the SPI bus
+  interface. My goal is to avoid using it for non-packet work.
+
+* The ENC28J60 has a generic checksum offload engine for IP/TCP/UDP, so I
+  can avoid directly calculating those on the VIC. Since all modern network
+  adapters have checksum offload engines, I don't see this as "cheating."
+
+* I have set up the code such that all initialization routines and tables
+  are set up at the end of the code. As of this writing, the only init code
+  is for the VIA SPI interface and the ENC28J60, weighing in at 112 bytes.
+  Once init code for higher level protocols and support code is added, I
+  believe I will be able to reclaim at least a whole 256-byte memory page
+  by reusing the memory used by the init code.
+
+This project builds under the ACME Cross-Assembler by Marco Baye.
+Binaries:   http://www.esw-heim.tu-clausthal.de/~marco/smorbrod/acme/
+Source:     http://sourceforge.net/projects/acme-crossass/
+
+While you're here, why don't you look at some of my other projects? My code
+portfolio is available at https://github.com/jbruchon :)

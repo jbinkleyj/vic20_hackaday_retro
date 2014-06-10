@@ -1,0 +1,39 @@
+#
+# Build ignores
+#
+.*
+*.o
+*.o.*
+*.a
+*.1.gz
+Kbuild
+Config.in
+
+#
+# Never ignore these
+#
+!.gitignore
+
+#
+# Normal output and testing dirs
+#
+/main.o
+/symbols.txt
+/build.log
+/*.?.gz
+
+#
+# Backups / patches
+#
+*~
+*.orig
+*.rej
+/*.patch
+
+#
+# debugging stuff
+#
+core
+.gdb_history
+.gdbinit
+
