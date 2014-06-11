@@ -26,7 +26,6 @@ e28_init
 	rts
 
 e28_init_regs_byte
-!08 E28_ECON1, %00010100	; Enable checksums and packet reception
 !08 E28_ERXSTL, <E28_RXBUF_START
 !08 E28_ERXSTH, >E28_RXBUF_START
 !08 E28_ERXNDL, <E28_RXBUF_END
@@ -42,10 +41,11 @@ e28_init_regs_byte
 !08 E28_MABBIPG, $15		; Inter-packet gap (802.3 compliance)
 !08 E28_MAIPGL, $12
 ;!08 E28_AIPGH, $0c		; Only used for half-duplex
-!08 E28_MAADR1,$c0		; MAC address
-!08 E28_MAADR2,$de
-!08 E28_MAADR3,$c0
-!08 E28_MAADR4,$ff
-!08 E28_MAADR5,$ee
-!08 E28_MAADR6,$ee
+!08 E28_MAADR1, $c0		; MAC address
+!08 E28_MAADR2, $de
+!08 E28_MAADR3, $c0
+!08 E28_MAADR4, $ff
+!08 E28_MAADR5, $ee
+!08 E28_MAADR6, $ee
+!08 E28_ECON1, %00010100	; Enable checksums and packet reception
 e28_init_regs_end
