@@ -13,10 +13,11 @@
 SPI_VIA=$9110
 
 ; SPI control flags for output on SPI control port
-; WARNING: SPI code requires SPI_INVDAT on bit 0 of the port!
-SPI_SEL=4
-SPI_INVCLK=2
-SPI_INVDAT=1
+; VIC-20 cannot use bit 0 optimization for SPI_INVDAT
+SPI_SEL=        %00010000
+SPI_INVCLK=     %00001000
+SPI_INVDAT=     %00000100
+SPI_INVDAT_MASK=%11111011
 
 ; --- End VIA SPI addresses ---
 
@@ -34,12 +35,13 @@ SPI_INVDAT=1
 ; by XORing the current shift register output appropriately, which is
 ; done via INVDAT.
 ;
-; note code assumes the SPI_INVDAT on bit 0 of the port A - so it can be
-; modified quickly by INC and DEC
-;
 ; The code waits for the shift register to finish. You could do that with
 ; NOPs as well for example, as a byte only takes 16 cycles. 
 ; However, then you can't test it with lower clocks easily.
+;
+; If you define INVERT_ON_BIT0:
+; code assumes the SPI_INVDAT on bit 0 of the port A - so it can be
+; modified quickly by INC and DEC
 
 
 ; deselect the connected SPI device
@@ -70,31 +72,44 @@ spi_w
 	; mode 0
 	; make sure last bit is 0, shifting bit 7 into carry
 	asl
-	bcs +
+	bcs spi_w_invert
 	; last bit was 0, nothing to do but send the byte
 	sta SPI_VIA+VIA_SR
-	; wait to finish
-	lda #%00000100
+	lda #%00000100		; wait to finish
 -	bit SPI_VIA+VIA_IFR
 	beq -
 	bne ++
-	
-+	; invert the current bit (which is last bit from prev. 
+
+!ifdef INVERT_ON_BIT0 {
+	; invert the current bit (which is last bit from prev. 
 	; data byte, which we set to zero)
+spi_w_invert
 	inc SPI_VIA+VIA_DRA
-	; compensate for the inversion
-	eor #$fe
-	; send out the data
-	sta SPI_VIA+VIA_SR
-	; wait to finish
-	lda #%00000100
+	eor #$fe		; compensate for the inversion
+	sta SPI_VIA+VIA_SR	; send out the data
+	lda #%00000100		; wait to finish
 -	bit SPI_VIA+VIA_IFR
 	beq -
-	; reset inverter
-	dec SPI_VIA+VIA_DRA
-++	; clear int
-	sta SPI_VIA+VIA_IFR
-	; read read data
-	lda SPI_VIA+VIA_DRB	; load from external shift reg
+	dec SPI_VIA+VIA_DRA	; reset inverter
+} else {
+	; compensate for the inversion
+	spi_w_invert
+	eor #$fe
+	pha
+	; invert the current bit (which is last bit from prev. 
+	; data byte, which we set to zero)
+	lda SPI_VIA+VIA_DRA
+	ora SPI_INVDAT
+	sta SPI_VIA+VIA_DRA
+	pla
+	sta SPI_VIA+VIA_SR	; send out the data
+	lda #%00000100		; wait to finish
+-	bit SPI_VIA+VIA_IFR
+	beq -
+	lda SPI_VIA+VIA_DRA	; reset inverter
+	and SPI_INVDAT_MASK
+	sta SPI_VIA+VIA_DRA
+}
+++	sta SPI_VIA+VIA_IFR	; clear int
+	lda SPI_VIA+VIA_DRB	; do read from ext. shift reg
 	rts
-
