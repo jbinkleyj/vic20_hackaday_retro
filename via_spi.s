@@ -8,6 +8,8 @@
 
 !src "via_regs.s"
 
+via_spi_code_start
+
 ; --- 6522 VIA addresses for SPI interface ---
 ; Base address of VIA with SPI interface attached
 SPI_VIA=$9110
@@ -93,7 +95,7 @@ spi_w_invert
 	dec SPI_VIA+VIA_DRA	; reset inverter
 } else {
 	; compensate for the inversion
-	spi_w_invert
+spi_w_invert
 	eor #$fe
 	pha
 	; invert the current bit (which is last bit from prev. 
@@ -113,3 +115,5 @@ spi_w_invert
 ++	sta SPI_VIA+VIA_IFR	; clear int
 	lda SPI_VIA+VIA_DRB	; do read from ext. shift reg
 	rts
+
+via_spi_code_end

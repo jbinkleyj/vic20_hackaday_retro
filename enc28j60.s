@@ -3,6 +3,8 @@
 
 !src "enc28j60_regs.s"
 
+enc28j60_code_start
+
 E28_BANK=$02	; Current bank
 E28_TEMP=$03	; Work area
 E28_MEML=$04	; Pointer for memory copy calls
@@ -144,3 +146,4 @@ e28_write_buffer
 	bne -		; Retrieve another page
 +	jmp spi_deselect
 
+enc28j60_code_end
