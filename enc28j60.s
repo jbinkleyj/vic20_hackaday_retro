@@ -5,12 +5,15 @@
 
 enc28j60_code_start
 
-E28_BANK=$02	; Current bank
-E28_TEMP=$03	; Work area
-E28_MEML=$04	; Pointer for memory copy calls
-E28_MEMH=$05
-E28_SIZH=$06	; 16-bit MEM(L/H) size
-E28_SIZL=$07
+; Zero page locations
+E28_BANK=ZP0+$02	; Current bank
+E28_TEMP=ZP0+$03	; Work area
+E28_MEML=ZP0+$04	; Pointer for memory copy calls
+E28_MEMH=ZP0+$05
+E28_SIZH=ZP0+$06	; 16-bit MEM(L/H) size
+E28_SIZL=ZP0+$07
+
+E28_PPCB=%00000000	; Per-packet control byte
 
 ; --- Low-level device access ---
 
@@ -86,7 +89,7 @@ e28_src
 	jmp spi_w
 
 
-; --- High-level device access ---
+; --- Mid-level device access ---
 
 ; Set up read pointer on device to values in MEM(L/H)
 e28_set_readptr
@@ -145,5 +148,7 @@ e28_write_buffer
 	ldx #$ff
 	bne -		; Retrieve another page
 +	jmp spi_deselect
+
+; 
 
 enc28j60_code_end

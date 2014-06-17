@@ -11,17 +11,16 @@ END_RAM0=$1dff
 *=START_RAM0+1
 PKTBUF=END_RAM0-1518+1	; 1518 bytes for ethernet packet
 
-
 ; VIC-20 extra free memory blocks
 ; When things get tight, these could become very useful.
 START_RAM1=820		; $C7 (199) bytes
 END_RAM1=1023
 START_RAM2=512		; $59 (89) bytes
 END_RAM2=600
-START_ZP0=251		; Free zero page space (5 bytes)
-END_ZP0=255
-START_ZP1=115		; More ZP (29 bytes)
-END_ZP1=143
+ZP0=115			; ZP (29 bytes)
+END_ZP0=143
+ZP1=251			; ZP (5 bytes)
+END_ZP1=255
 
 
 ; BASIC stub for startup

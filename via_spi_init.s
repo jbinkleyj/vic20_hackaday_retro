@@ -1,22 +1,18 @@
 ; init the SPI code
 spi_init
-	; deselect any device,
-	; do invert the clock (mode 0)
+	; deselect any device and invert the clock (mode 0)
 	lda SPI_VIA+VIA_PORTA
 	ora #SPI_SEL+SPI_INVCLK
 	and #255-SPI_INVDAT
 	sta SPI_VIA+VIA_PORTA
 
-	; set port A to output
-	lda SPI_VIA+VIA_DDRA
+	lda SPI_VIA+VIA_DDRA	; set port A to output
 	ora #SPI_SEL+SPI_INVDAT+SPI_INVCLK
 	sta SPI_VIA+VIA_DDRA
-	; set port B to input
-	lda #$00
+	lda #$00		; set port B to input
 	sta SPI_VIA+VIA_DDRB
 
-	; disable shift register interrupts
-	lda #%00000100
+	lda #%00000100		; disable shift register interrupts
 	sta SPI_VIA+VIA_IER
 
 	; set up shift register mode to output
