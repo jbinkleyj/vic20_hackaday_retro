@@ -19,7 +19,6 @@ SPI_VIA=$9110
 SPI_SEL=        %00010000
 SPI_INVCLK=     %00001000
 SPI_INVDAT=     %00000100
-SPI_INVDAT_MASK=%11111011
 
 ; --- End VIA SPI addresses ---
 
@@ -86,34 +85,33 @@ spi_w
 	; invert the current bit (which is last bit from prev. 
 	; data byte, which we set to zero)
 spi_w_invert
-	inc SPI_VIA+VIA_DRA
+	inc SPI_VIA+VIA_PORTA
 	eor #$fe		; compensate for the inversion
 	sta SPI_VIA+VIA_SR	; send out the data
 	lda #%00000100		; wait to finish
 -	bit SPI_VIA+VIA_IFR
 	beq -
-	dec SPI_VIA+VIA_DRA	; reset inverter
+	dec SPI_VIA+VIA_PORTA	; reset inverter
 } else {
-	; compensate for the inversion
 spi_w_invert
-	eor #$fe
+	eor #$fe		; compensate for the inversion
 	pha
 	; invert the current bit (which is last bit from prev. 
 	; data byte, which we set to zero)
-	lda SPI_VIA+VIA_DRA
+	lda SPI_VIA+VIA_PORTA
 	ora SPI_INVDAT
-	sta SPI_VIA+VIA_DRA
+	sta SPI_VIA+VIA_PORTA
 	pla
 	sta SPI_VIA+VIA_SR	; send out the data
 	lda #%00000100		; wait to finish
 -	bit SPI_VIA+VIA_IFR
 	beq -
-	lda SPI_VIA+VIA_DRA	; reset inverter
-	and SPI_INVDAT_MASK
-	sta SPI_VIA+VIA_DRA
+	lda SPI_VIA+VIA_PORTA	; reset inverter
+	and #255-SPI_INVDAT
+	sta SPI_VIA+VIA_PORTA
 }
 ++	sta SPI_VIA+VIA_IFR	; clear int
-	lda SPI_VIA+VIA_DRB	; do read from ext. shift reg
+	lda SPI_VIA+VIA_PORTB	; do read from ext. shift reg
 	rts
 
 via_spi_code_end

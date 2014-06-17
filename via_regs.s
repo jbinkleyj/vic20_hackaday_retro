@@ -1,6 +1,6 @@
 ; VIA standard register offsets
-VIA_DRB=0
-VIA_DRA=1
+VIA_PORTB=0
+VIA_PORTA=1
 VIA_DDRB=2
 VIA_DDRA=3
 VIA_T1CL=4
