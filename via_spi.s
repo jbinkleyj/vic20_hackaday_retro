@@ -48,9 +48,9 @@ SPI_INVDAT=     %00000100
 ; deselect the connected SPI device
 spi_deselect
 	pha
-	lda SPI_VIA+VIA_DRA
+	lda SPI_VIA+VIA_PORTA
 	ora #SPI_SEL
-	sta SPI_VIA+VIA_DRA
+	sta SPI_VIA+VIA_PORTA
 	jsr spi_r
 	pla
 	rts
@@ -58,9 +58,9 @@ spi_deselect
 ; select the connected SPI device
 spi_select
 	pha
-	lda SPI_VIA+VIA_DRA	
+	lda SPI_VIA+VIA_PORTA	
 	and #255-SPI_SEL
-	sta SPI_VIA+VIA_DRA
+	sta SPI_VIA+VIA_PORTA
 	pla
 	rts
 
