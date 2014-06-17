@@ -125,17 +125,18 @@ e28_read_buffer
 	lda E28_SIZH	; Handle 16-bit size
 	beq +
 	inc E28_MEMH
-	ldy #$00
 	ldx #$ff
-	bne -		; Retrieve another page
+	ldy #$00
+	beq -		; Retrieve another page
 +	jmp spi_deselect
 
-; Write E28_SIZ(L/H) bytes from device buffer at previously set EWRPT
+; Write E28_SIZ(L/H) bytes to device buffer at previously set EWRPT
 e28_write_buffer
 	jsr spi_select
 	lda #E28_WBM
 	jsr spi_w
 	ldx E28_SIZL
+	ldy #$00
 -	lda (E28_MEML),y
 	jsr spi_w
 	iny
@@ -144,11 +145,54 @@ e28_write_buffer
 	lda E28_SIZH	; Handle 16-bit size
 	beq +
 	inc E28_MEMH
-	ldy #$00
 	ldx #$ff
-	bne -		; Retrieve another page
+	ldy #$00
+	beq -		; Retrieve another page
 +	jmp spi_deselect
 
-; 
+
+; --- High-level device access (send/recv packet) ---
+
+; Checksumming and sending packets to the network card are
+; combined operations to enable offloading the checksum work.
+; This driver links the TCP/IP to the Ethernet driver and
+; pushes checksum calculation work to the ENC28J60 chip.
+
+; To send data:
+; 1. Build the complete packet in memory
+; 2. Fill a CKSUM# area with the start/end of the part to
+;    sum over and the offset to place the checksum at.
+;    If offset is 0, that checksum slot will be ignored.
+; 3. If TCP is used, the pseudo-header must be removed.
+;    Set PSEUDOHEADER to $01 if TCP is used.
+; 4. Set X/Y to low/high byte of 16-bit packet size
+; 5. Call send_packet
+
+CKSUM1_START=247
+CKSUM1_ENDL=248
+CKSUM1_ENDH=249
+CKSUM1_OFFSET=250
+CKSUM2_START=251
+CKSUM2_ENDL=252
+CKSUM2_ENDH=253
+CKSUM2_OFFSET=254
+PSEUDOHEADER=255
+
+send_packet
+	lda #<E28_TXBUF_START	; Send packet data to ENC28J60
+	sta E28_MEML
+	lda #>E28_TXBUF_START
+	sta E28_MEMH
+	jsr e28_set_writeptr
+	stx E28_SIZL		; Store packet size
+	sty E28_SIZH
+	lda #$00		; Zero the send override byte
+	sta PKTBUF0
+	lda #<PKTBUF0		; Point to start of packet buffer for TX
+	sta E28_MEML
+	lda #>PKTBUF0
+	sta E28_MEMH
+	jsr e28_write_buffer	; Send packet to ENC28J60 memory
+	; Checksum offload handling code
 
 enc28j60_code_end
