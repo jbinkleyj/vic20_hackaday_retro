@@ -3,6 +3,10 @@ e28_init
 	; assume the ENC28J60 is the only SPI device
 	lda #$ff	; Invalid bank forces initial bank setting
 	sta E28_BANK
+	lda #<E28_RXBUF_START	 ; Set up Next Packet Pointer
+	sta E28_NPPL
+	lda #>E28_RXBUF_END
+	sta E28_NPPH
 	; Initialize a bunch of device control registers
 	; In the future this may work better if the data was simply
 	; copied to the stack in one shot so the data could be pulled
@@ -28,6 +32,8 @@ e28_init
 e28_init_regs_byte
 !08 E28_ERXSTL, <E28_RXBUF_START
 !08 E28_ERXSTH, >E28_RXBUF_START
+!08 E28_ETXSTL, <E28_TXBUF_START
+!08 E28_ETXSTH, >E28_TXBUF_START
 !08 E28_ERXNDL, <E28_RXBUF_END
 !08 E28_ERXNDH, >E28_RXBUF_END
 !08 E28_ERXRDPTL, <E28_RXBUF_START
@@ -47,5 +53,4 @@ e28_init_regs_byte
 !08 E28_MAADR4, $ff
 !08 E28_MAADR5, $ee
 !08 E28_MAADR6, $ee
-!08 E28_ECON1, %00010100	; Enable checksums and packet reception
 e28_init_regs_end

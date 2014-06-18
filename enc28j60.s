@@ -5,14 +5,6 @@
 
 enc28j60_code_start
 
-; Zero page locations
-E28_BANK=ZP0+$02	; Current bank
-E28_TEMP=ZP0+$03	; Work area
-E28_MEML=ZP0+$04	; Pointer for memory copy calls
-E28_MEMH=ZP0+$05
-E28_SIZH=ZP0+$06	; 16-bit MEM(L/H) size
-E28_SIZL=ZP0+$07
-
 E28_PPCB=%00000000	; Per-packet control byte
 
 ; --- Low-level device access ---
@@ -73,8 +65,9 @@ e28_write
 	jsr e28_cr_setbank
 e28_write_bypass
 	; setbank enters here to avoid calling itself
+	; Universal regs (present in all banks) can enter here
 	jsr spi_select
-	and #10		; Set command
+	and #$1f		; Set command
 	sty E28_TEMP
 	ora #E28_TEMP
 e28_write_finish
@@ -151,6 +144,19 @@ e28_write_buffer
 	beq -		; Retrieve another page
 +	jmp spi_deselect
 
+; Enable checksums and packet reception
+e28_enable_recv
+	ldy #E28_BFS
+	ldx #%00010100
+	lda #E28_ECON1
+	jmp e28_write
+
+; Disable checksums/reception
+e28_disable_recv
+	ldy #E28_BFC
+	ldx #%00010100
+	lda #E28_ECON1
+	jmp e28_write
 
 ; --- High-level device access (send/recv packet) ---
 
@@ -168,16 +174,6 @@ e28_write_buffer
 ;    Set PSEUDOHEADER to $01 if TCP is used.
 ; 4. Set X/Y to low/high byte of 16-bit packet size
 ; 5. Call send_packet
-
-PSEUDOHEADER=$f7
-CKSUM1_START=$f8
-CKSUM1_ENDL=$f9
-CKSUM1_ENDH=$fa
-CKSUM1_OFFSET=$fb
-CKSUM2_START=$fc
-CKSUM2_ENDL=$fd
-CKSUM2_ENDH=$fe
-CKSUM2_OFFSET=$ff
 
 send_packet
 	lda #<E28_TXBUF_START	; Send packet data to ENC28J60
@@ -207,8 +203,8 @@ send_packet_skip_cksum
 	inx
 	bne -			; Process another slot if X didn't wrap
 	jmp send_packet_no_cksums
-+	inx			; Do the checksum offload
-	lda $00,x		; Get start of range
++	lda $00,x		; Get start of range
+	stx E28_TEMP
 	clc
 	adc #<E28_TXBUF_START	; Add adapter's low byte too
 	tax
@@ -218,6 +214,7 @@ send_packet_skip_cksum
 	ldx #>E28_TXBUF_START	; Offload high byte is constant
 	lda #E28_EDMASTH
 	jsr e28_write
+	ldx E28_TEMP
 	lda $01,x		; Same process for end of range
 	clc
 	adc #<E28_TXBUF_START
@@ -225,6 +222,7 @@ send_packet_skip_cksum
 	ldy #E28_WCR
 	lda #E28_EDMANDL
 	jsr e28_write
+	ldx E28_TEMP
 	lda $02,x
 	clc
 	adc #>E28_TXBUF_START
@@ -238,8 +236,62 @@ send_packet_skip_cksum
 	txa
 	and #%00100000
 	bne -
-	; load checksum from controller and push to packet
+	; Load checksum from controller and push to packet
+	lda #E28_EDMACSL
+	jsr e28_rcr
+	stx CKSUM1_ENDL
+	lda #E28_EDMACSH
+	jsr e28_rcr
+	stx CKSUM1_ENDH
+send_packet_push_cksum
+	lda #<E28_TXBUF_START
+	ldx E28_TEMP
+	clc
+	adc $03,x		; Apply offset
+	sta E28_MEML
+	lda #>E28_TXBUF_START
+	sta E28_MEMH
+	jsr e28_set_writeptr
+	jsr spi_select		; Inline the write code
+	lda #E28_WBM
+	jsr spi_w
+	lda CKSUM1_ENDL
+	jsr spi_w
+	lda CKSUM1_ENDH
+	jsr spi_w
+	jsr spi_deselect
+	; Keep summing until all sums are exhausted
+	jmp send_packet_skip_cksum
 send_packet_no_cksums
+	lda #<E28_TXBUF_START	; Set TX end pointer
+	clc
+	adc E28_SIZL
+	bcc +
+	inc E28_SIZH
++	tax
+	ldy #E28_WCR
+	lda #E28_ETXNDL
+	jsr e28_write
+	lda #>E28_TXBUF_START
+	clc
+	adc E28_SIZH
+	tax
+	lda #E28_ETXNDH
+	jsr e28_write
+	ldy #E28_BFS
+	ldx #%00001000		; ECON1.TXRTS
+	lda #E28_ECON1
+	jmp e28_write_bypass	; Tell ENC28J60 to send packet
 
+; Attempt to receive a packet if possible
+; Returns clear carry if no packet available, otherwise sets carry
+recv_packet
+	lda #E28_EPKTCNT
+	jsr e28_rcr
+	cpx #$00		; EPKTCNT=0 means no packets
+	bne +
+	clc
+	rts
++	
 
 enc28j60_code_end

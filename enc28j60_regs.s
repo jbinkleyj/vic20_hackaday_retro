@@ -1,6 +1,28 @@
 ; ENC28J60 SPI Ethernet adapter driver
 ; SPI commands and device control registers
 
+; Zero page locations used by the driver
+E28_BANK=ZP0+$00	; Current bank
+E28_TEMP=ZP0+$01	; Work area
+E28_MEML=ZP0+$02	; Pointer for memory copy calls
+E28_MEMH=ZP0+$03
+E28_SIZL=ZP0+$04	; 16-bit MEM(L/H) size
+E28_SIZH=ZP0+$05
+E28_NPPL=ZP0+$06	; Next Packet Pointer for recv
+E28_NPPH=ZP0+$07
+PSEUDOHEADER=$f7	; UDP/TCP pseudo-header for checksums
+CKSUM1_START=$f8	; Checksum 1 start address (high always 0)
+CKSUM1_ENDL=$f9		; Checksum 1 end address
+CKSUM1_ENDH=$fa
+CKSUM1_OFFSET=$fb	; Offset to place the calculated checksum
+CKSUM2_START=$fc	; Checksum 2
+CKSUM2_ENDL=$fd
+CKSUM2_ENDH=$fe
+CKSUM2_OFFSET=$ff
+; The driver uses X increments that wrap around to determine when sums
+; have been completed. Don't change these sum locations unless you edit
+; the checksum code to handle the changes.
+
 ; Low-level SPI commands (aaaaa = control register address)
 E28_RCR=%00000000	; 000aaaaa = Read Control Register
 E28_RBM=%00111010	; Read Buffer Memory
