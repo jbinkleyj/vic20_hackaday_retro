@@ -57,9 +57,10 @@ e28_cr_nobank2
 
 ; Read control register A into X
 e28_rcr
+	jsr e28_cr_setbank
+e28_rcr_bypass
 	jsr spi_select
-	and #10		; Set command
-	ora #E28_RCR
+	and #$1f		; RCR = 000aaaaa
 	jsr spi_w
 	jsr spi_r
 	jmp spi_deselect
@@ -168,15 +169,15 @@ e28_write_buffer
 ; 4. Set X/Y to low/high byte of 16-bit packet size
 ; 5. Call send_packet
 
-CKSUM1_START=247
-CKSUM1_ENDL=248
-CKSUM1_ENDH=249
-CKSUM1_OFFSET=250
-CKSUM2_START=251
-CKSUM2_ENDL=252
-CKSUM2_ENDH=253
-CKSUM2_OFFSET=254
-PSEUDOHEADER=255
+PSEUDOHEADER=$f7
+CKSUM1_START=$f8
+CKSUM1_ENDL=$f9
+CKSUM1_ENDH=$fa
+CKSUM1_OFFSET=$fb
+CKSUM2_START=$fc
+CKSUM2_ENDL=$fd
+CKSUM2_ENDH=$fe
+CKSUM2_OFFSET=$ff
 
 send_packet
 	lda #<E28_TXBUF_START	; Send packet data to ENC28J60
@@ -193,6 +194,52 @@ send_packet
 	lda #>PKTBUF0
 	sta E28_MEMH
 	jsr e28_write_buffer	; Send packet to ENC28J60 memory
+
+send_packet_cksum_offload
 	; Checksum offload handling code
+	ldx #CKSUM1_START
+-	lda $03,x		; Read checksum offset
+	bne +			; Only process this sum if nonzero
+send_packet_skip_cksum
+	inx			; Skip this checksum slot
+	inx
+	inx
+	inx
+	bne -			; Process another slot if X didn't wrap
+	jmp send_packet_no_cksums
++	inx			; Do the checksum offload
+	lda $00,x		; Get start of range
+	clc
+	adc #<E28_TXBUF_START	; Add adapter's low byte too
+	tax
+	ldy #E28_WCR
+	lda #E28_EDMASTL
+	jsr e28_write
+	ldx #>E28_TXBUF_START	; Offload high byte is constant
+	lda #E28_EDMASTH
+	jsr e28_write
+	lda $01,x		; Same process for end of range
+	clc
+	adc #<E28_TXBUF_START
+	tax
+	ldy #E28_WCR
+	lda #E28_EDMANDL
+	jsr e28_write
+	lda $02,x
+	clc
+	adc #>E28_TXBUF_START
+	tax
+	lda #E28_EDMANDH
+	jsr e28_write
+	ldy #E28_BFS		; Prepare to do the checksum
+	ldx #%00110000		; Set ECON1.DMAST and ECON1.CSUMEN
+-	lda #E28_ECON1
+	jsr e28_rcr_bypass	; Spin on ECON1 until DMAST is 0
+	txa
+	and #%00100000
+	bne -
+	; load checksum from controller and push to packet
+send_packet_no_cksums
+
 
 enc28j60_code_end

@@ -27,30 +27,37 @@ PKTBUF=PKTBUF0+1	; plus prefixed send override byte
 ; $17		Time to live
 ; $18		Protocol number
 ; $19-$1a	IP header checksum
-; --- TCP pseudo-header overlaps here ---
+; --- TCP/UDP pseudo-header overlaps here ---
 ; $1b-$1e	Source IP address
 ; $1f-$22	Destination IP address
-; --- TCP pseudo-header ---
+; --- TCP/UDP pseudo-header ---
 ; The pseudo-header is overwritten after checksum computation.
-; The DMA controller in the ENC28J60 is used to move the TCP
+; The DMA controller in the ENC28J60 is used to move the TCP/UDP
 ; header and data down once the checksums are finished.
-; Pseudo-header starts at $1b but TCP packet data is shifted
+; Pseudo-header starts at $1b but TCP/UDP packet data is shifted
 ; down to $23 to wipe out the pseudo-header.
 ; $23		Zero
-; $24		Protocol (always 6)
+; $24		Protocol (TCP=6, UDP=17)
 ; $25-$26	TCP length (header + data)
-; --- Actual TCP header ---
+; --- Actual TCP/UDP header ---
 ; $27-$28	Source port
 ; $29-$2a	Destination port
+;
+; --- Header if using TCP ---
 ; $2b-$2e	Sequence number
 ; $2f-$32	Acknowledgement number
 ; $33		Data offset + reserved
 ; $34		Flags
 ; $35		Window
-; $36-$37	Checksum
+; $36-$37	Checksum of header + data
 ; $38-$39	Urgent pointer
 ; $3a		Start of data
 ; ... variable length ...
+;
+; --- Header if using UDP ---
+; $2b-$2c	Length of UDP header (8 bytes) + data
+; $2d-$2e	Checksum of header + data
+
 
 ; VIC-20 extra free memory blocks
 ; When things get tight, these could become very useful.
