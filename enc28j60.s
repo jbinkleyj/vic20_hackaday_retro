@@ -160,11 +160,17 @@ e28_disable_recv
 
 ; --- High-level device access (send/recv packet) ---
 
-; Checksumming and sending packets to the network card are
-; combined operations to enable offloading the checksum work.
-; This driver links the TCP/IP to the Ethernet driver and
+; This driver links the TCP/IP stack to the Ethernet driver and
 ; pushes checksum calculation work to the ENC28J60 chip.
-
+; Checksumming and sending packets to the network card are combined
+; operations to enable offloading the checksum work to the ENC28J60.
+;
+; The checksum offloading code below is much larger on the host than a
+; 6502 checksum routine would be. However, the time consumed by such a
+; host-based routine requires many thousands of CPU cycles per packet!
+; The offload code is generalized so that both IP and TCP/UDP checksums
+; can be handled in one shot.
+;
 ; To send data:
 ; 1. Build the complete packet in memory
 ; 2. Fill a CKSUM# area with the start/end of the part to
@@ -190,7 +196,6 @@ send_packet
 	lda #>PKTBUF0
 	sta E28_MEMH
 	jsr e28_write_buffer	; Send packet to ENC28J60 memory
-
 send_packet_cksum_offload
 	; Checksum offload handling code
 	ldx #CKSUM1_START
@@ -292,6 +297,6 @@ recv_packet
 	bne +
 	clc
 	rts
-+	
++
 
 enc28j60_code_end
